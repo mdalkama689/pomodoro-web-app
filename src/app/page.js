@@ -1,103 +1,257 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { IoSettingsOutline, IoPlay, IoPause, IoRefresh } from "react-icons/io5";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const musicRef = useRef(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const startMusic = () => {
+    if (!musicRef.current) {
+      musicRef.current = new Audio("/alarm.mp3");
+    }
+    musicRef.current.play();
+  };
+
+  const stopMusic = () => {
+    if (musicRef.current) {
+      musicRef.current.pause();
+      musicRef.current.currentTime = 0;
+    }
+  };
+
+  const [currentTimer, setCurrentTimer] = useState("pomodoro");
+  const [durations, setDurations] = useState({
+    pomodoro: "25:00",
+    "short-break": "05:00",
+    "long-break": "15:00",
+  });
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [intervalId, setIntervalId] = useState(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [musicDialogOpen, setMusicDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const savedDurations = localStorage.getItem("durations");
+    if (savedDurations) {
+      setDurations(JSON.parse(savedDurations));
+    }
+  }, []);
+
+  useEffect(() => {
+    const d = durations[currentTimer] || "00:00";
+    const [minutes, seconds] = d.split(":").map(Number);
+    setTimeLeft(minutes * 60 + seconds);
+  }, [currentTimer, durations]);
+
+  const handleChangeButton = (value) => {
+    setCurrentTimer(value);
+  };
+
+  const handleStartPause = () => {
+    if (isRunning) {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        setIntervalId(null);
+      }
+    } else {
+      const id = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            startMusic();
+            clearInterval(id);
+            setMusicDialogOpen(true);
+            setIsRunning(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      setIntervalId(id);
+    }
+    setIsRunning(!isRunning);
+  };
+
+  const handleReset = () => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+    setIsRunning(false);
+    const [minutes, seconds] = durations[currentTimer].split(":").map(Number);
+    setTimeLeft(minutes * 60 + seconds);
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const handleDurationChange = (type, value) => {
+    setDurations((prev) => ({
+      ...prev,
+      [type]: value,
+    }));
+  };
+
+  const handleSaveDurations = () => {
+    localStorage.setItem("durations", JSON.stringify(durations));
+    setDialogOpen(false);
+    const [minutes, seconds] = durations[currentTimer].split(":").map(Number);
+    setTimeLeft(minutes * 60 + seconds);
+  };
+
+  const handleCloseMusicDialog = () => {
+    setMusicDialogOpen(false);
+  };
+
+  const calculateProgress = () => {
+    const totalDuration = durations[currentTimer];
+    const [totalMinutes, totalSeconds] = totalDuration.split(":").map(Number);
+    const totalSecondsDuration = totalMinutes * 60 + totalSeconds;
+    return ((totalSecondsDuration - timeLeft) / totalSecondsDuration) * 100;
+  };
+
+
+  return (
+    <div className="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex flex-col items-center justify-center gap-2 p-6">
+      <h1 className="text-white text-4xl font-extrabold mb-4">Pomodoro Timer</h1>
+      <div className="flex rounded-lg bg-zinc-800 p-2 gap-3">
+        {["pomodoro", "short-break", "long-break"].map((type) => (
+          <Button
+            key={type}
+            onClick={() => handleChangeButton(type)}
+            className={`text-white px-4 py-2 rounded-md transition duration-300 ease-in-out focus:outline-none ${
+              currentTimer === type
+                ? type === "pomodoro"
+                  ? "bg-red-600"
+                  : type === "short-break"
+                  ? "bg-green-600"
+                  : "bg-blue-600"
+                : "hover:bg-zinc-700"
+            }`}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+            {type.replace("-", " ")}
+          </Button>
+        ))}
+      </div>
+
+      <div className="w-64 h-2 bg-zinc-700 rounded-full mt-4">
+        <div
+          className="h-full bg-red-600 rounded-full"
+          style={{ width: `${calculateProgress()}%` }}
+        />
+      </div>
+
+      <div className="rounded-full bg-zinc-800 w-64 h-64 flex items-center justify-center">
+        <p className="text-white text-5xl font-bold">{formatTime(timeLeft)}</p>
+      </div>
+
+ 
+    
+
+      <div className="flex gap-6 items-center justify-center mt-6">
+        <Button
+          onClick={handleStartPause}
+          className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition duration-200 focus:outline-none"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          {isRunning ? <IoPause /> : <IoPlay />}
+        </Button>
+
+        <button
+          onClick={handleReset}
+          className="text-white text-4xl cursor-pointer hover:text-red-600 transition duration-300 bg-transparent border-none outline-none"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <IoRefresh />
+        </button>
+
+   
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        
+          <DialogTrigger asChild>
+            <button className="text-white text-4xl cursor-pointer hover:text-gray-400 transition duration-300 bg-transparent border-none outline-none">
+              <IoSettingsOutline />
+            </button>
+          </DialogTrigger>
+
+
+          <DialogContent className="bg-zinc-900 text-white rounded-2xl p-6 shadow-xl w-[350px]">
+            <h2 className="text-xl font-bold mb-6">⏱ Timer Settings</h2>
+
+            <div className="space-y-4">
+              {["pomodoro", "short-break", "long-break"].map((label) => (
+                <div key={label}>
+                  <label className="block mb-1 capitalize text-sm text-gray-300">
+                    {label.replace("-", " ")}
+                  </label>
+                  <Input
+                    type="text"
+                    value={durations[label]}
+                    onChange={(e) => handleDurationChange(label, e.target.value)}
+                    placeholder="MM:SS"
+                    className="bg-zinc-800 text-white border border-zinc-700 focus:ring-2 focus:ring-red-600"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                variant="ghost"
+                className="hover:bg-zinc-800 text-gray-300"
+                onClick={() => setDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveDurations}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Save
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+  
+      <Dialog open={musicDialogOpen} onOpenChange={setMusicDialogOpen}>
+        <DialogContent className="bg-zinc-900 text-white rounded-2xl p-6 shadow-xl w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Timer Complete!</DialogTitle>
+            <DialogDescription>
+              The Pomodoro timer is finished. You can stop the music now.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                stopMusic();
+                handleCloseMusicDialog();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Stop Music
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
