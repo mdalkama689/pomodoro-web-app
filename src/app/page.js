@@ -18,7 +18,7 @@ export default function Home() {
   const musicRef = useRef(null);
 
   const startMusic = () => {
-    if (!musicRef.current) {
+    if (!musicRef.current) { 
       musicRef.current = new Audio("/alarm.mp3");
     }
     musicRef.current.play();
@@ -136,7 +136,7 @@ export default function Home() {
           <Button
             key={type}
             onClick={() => handleChangeButton(type)}
-            className={`text-white px-4 py-2 rounded-md transition duration-300 ease-in-out focus:outline-none ${
+            className={`text-white px-4 py-2 cursor-pointer rounded-md transition duration-300 ease-in-out focus:outline-none ${
               currentTimer === type
                 ? type === "pomodoro"
                   ? "bg-red-600"
@@ -168,7 +168,7 @@ export default function Home() {
       <div className="flex gap-6 items-center justify-center mt-6">
         <Button
           onClick={handleStartPause}
-          className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition duration-200 focus:outline-none"
+          className="bg-red-600 text-white px-6 cursor-pointer py-3 rounded-lg hover:bg-red-700 transition duration-200 focus:outline-none"
         >
           {isRunning ? <IoPause /> : <IoPlay />}
         </Button>
@@ -245,7 +245,7 @@ export default function Home() {
                 stopMusic();
                 handleCloseMusicDialog();
               }}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 cursor-pointer hover:bg-red-700 text-white"
             >
               Stop Music
             </Button>
