@@ -13,6 +13,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import MobileShare from "@/components/share/MobileShare";
+import TabShare from "@/components/share/TabShare";
 
 export default function Home() {
   const musicRef = useRef(null);
@@ -127,9 +129,26 @@ export default function Home() {
     return ((totalSecondsDuration - timeLeft) / totalSecondsDuration) * 100;
   };
 
+    const [deviceType, setDeviceType] = useState("big");
+
+  useEffect(() => {
+    const handleResize = () => {
+      setDeviceType(window.innerWidth < 1024 ? "small" : "big");
+    };
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
 
   return (
     <div className="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex flex-col items-center justify-center gap-2 p-6">
+      {deviceType === "small" ? <MobileShare /> : <TabShare />}
       <h1 className="text-white text-4xl font-extrabold mb-4">Pomodoro Timer</h1>
       <div className="flex rounded-lg bg-zinc-800 p-2 gap-3">
         {["pomodoro", "short-break", "long-break"].map((type) => (
